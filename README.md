@@ -271,3 +271,17 @@ Task classes handle:
 - Prediction parsing
 - Evaluation against ground truth
 - Results calculation
+
+
+# Reference
+
+If you find this project useful, please cite the following paper:
+
+```bibtex
+@article{wang2025trialpanorama,
+  title     = {TrialPanorama: Database and Benchmark for Systematic Review and Design of Clinical Trials},
+  author    = {Wang, Zifeng and Jin, Qiao and Lin, Jiacheng and Gao, Junyi and Pradeepkumar, Jathurshan and Jiang, Pengcheng and Danek, Benjamin and Lu, Zhiyong and Sun, Jimeng},
+  year      = {2025},
+}
+```
+
