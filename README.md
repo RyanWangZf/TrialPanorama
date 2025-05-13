@@ -1,4 +1,4 @@
-# Clinical Trial Benchmark Framework
+# TrialPanorama:Clinical Trial Database and Benchmark
 
 This benchmark framework provides tools for evaluating language models on clinical trial-related tasks, designed to assess model capabilities in understanding and reasoning about medical research:
 
@@ -12,6 +12,12 @@ This benchmark framework provides tools for evaluating language models on clinic
    - **Eligibility Criteria Design**: Creating inclusion/exclusion criteria
    - **Endpoint Design**: Defining primary and secondary outcomes
    - **Sample Size Estimation**: Calculating appropriate sample sizes
+
+## Data
+
+- TrialPanorama-database: https://huggingface.co/datasets/zifeng-ai/TrialPanorama-database
+
+- TrialPanorama-benchmark: https://huggingface.co/datasets/zifeng-ai/TrialPanorama-benchmark
 
 ## Installation
 
