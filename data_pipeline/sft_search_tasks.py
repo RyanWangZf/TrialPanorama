@@ -197,7 +197,7 @@ def save_retrieval_sft_data(df, output_dir=None):
     
     return csv_path, parquet_path
 
-def main():
+def run_deepretrieval_inference():
     """Main function to build and save study search SFT data."""
     import argparse
     
@@ -241,6 +241,47 @@ def main():
     print(f"  - CSV: {csv_path}")
     print(f"  - Parquet: {parquet_path}")
 
+
+def clean_data():
+    """Clean the data and reformat instruction prompt and answer."""
+    df = pd.read_csv(os.path.join(OUTPUT_DIR, "sft_study_search_data.csv"))
+    df = df.dropna(subset=["answer"])
+    
+    # Set the new instruction prompt
+    new_instruction = "Your task is to create search query given the input question. The query should use Boolean operators (AND, OR) and parentheses for grouping terms appropriately."
+    df['instruction_prompt'] = new_instruction
+    
+    # Extract query from the answer JSON
+    def extract_query(answer_text):
+        try:
+            # Find the JSON content between <answer> and </answer> tags
+            if '<answer>' in answer_text and '</answer>' in answer_text:
+                start = answer_text.find('<answer>') + len('<answer>')
+                end = answer_text.find('</answer>')
+                json_str = answer_text[start:end].strip()
+                answer_dict = json.loads(json_str)
+                return answer_dict.get('query', '')
+            else:
+                # Try to parse the entire answer as JSON
+                answer_dict = json.loads(answer_text)
+                return answer_dict.get('query', '')
+        except:
+            # If parsing fails, return the original answer
+            return answer_text
+    
+    df['answer'] = df['answer'].apply(extract_query)
+    
+    # Drop rows where answer is empty after extraction
+    df = df[df['answer'].str.strip() != '']
+    
+    df.to_csv(os.path.join(OUTPUT_DIR, "sft_study_search_data_cleaned.csv"), index=False)
+    df.to_parquet(os.path.join(OUTPUT_DIR, "sft_study_search_data_cleaned.parquet"), index=False)
+    print(f"Cleaned data saved. Total rows: {len(df)}")
+    
+    return df
+
+
 if __name__ == "__main__":
-    main()
+    run_deepretrieval_inference()
+    clean_data()
 
