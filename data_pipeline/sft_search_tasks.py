@@ -5,6 +5,7 @@ from pathlib import Path
 import requests
 from tqdm import tqdm
 import time
+import pdb
 
 # Get the repository root directory (parent of data_pipeline)
 REPO_ROOT = Path(__file__).parent.parent
@@ -25,11 +26,22 @@ def load_jsonl_data(file_path):
 
 def create_instruction_prompt():
     """Create instruction prompt for study search/retrieval task."""
-    return ("You are a systematic review expert specializing in study retrieval for medical research. "
-            "Based on the systematic review background, objectives, and selection criteria provided, "
-            "your task is to identify relevant PubMed IDs (PMIDs) of studies that should be included in this review.")
+    return """You are a helpful assistant. You first thinks about the reasoning process in the mind and then provides the user with the answer.
+Show your work in <think> </think> tags. Your final response must be in JSON format within <answer> </answer> tags. For example,
+<think>
+[thinking process]
+</think>
+<answer>
+{
+    "query": "...."
+} 
+</answer>. 
+Note: The query should use Boolean operators (AND, OR) and parentheses for grouping terms appropriately. You don't need to rewrite the query when the query is already good.
 
-def format_retrieval_question(item):
+Here's the user query:
+    """
+
+def format_review_information(item):
     """Format the retrieval question with systematic review information."""
     inputs = item.get('inputs', {})
     
@@ -39,15 +51,14 @@ def format_retrieval_question(item):
     selection_criteria = inputs.get('selection criteria', '')
     
     # Format the question
-    question = f"""Please identify relevant studies for the following systematic review:
+    question = f"""Here is the background, objectives, and selection criteria of a systematic review:
 
 Background: {background}
 
 Objectives: {objectives}
 
 Selection Criteria: {selection_criteria}
-
-Based on this systematic review context, provide a list of relevant PubMed IDs (PMIDs) that should be included in this review."""
+"""
     
     return question
 
@@ -59,7 +70,6 @@ def call_vllm_api(prompt, max_tokens=512, temperature=0.7, top_p=0.95):
         "max_tokens": max_tokens,
         "temperature": temperature,
         "top_p": top_p,
-        "stop": ["\n\n", "Based on"],
     }
     
     try:
@@ -122,13 +132,20 @@ def build_retrieval_sft_data(base_path=None, max_examples=None):
     
     for idx, item in enumerate(tqdm(task_data, desc="Processing examples")):
         # Format the question
-        question_text = format_retrieval_question(item)
+        question_text = format_review_information(item)
         
         # Create the full prompt for the model
-        full_prompt = f"{instruction_prompt}\n\n{question_text}\n\nRelevant PMIDs:"
+        full_prompt = f"{instruction_prompt}\n\nHere's the user query:{question_text}\n\nAssistant: Let me rewrite the query with reasoning. <think>"
         
         # Call vLLM API to generate answer
         answer_text = call_vllm_api(full_prompt)
+
+
+        # print("--------------------------------")
+        # print(item)
+        print(answer_text)
+        # print("--------------------------------")
+
         
         if answer_text is None:
             failed_count += 1
@@ -147,7 +164,7 @@ def build_retrieval_sft_data(base_path=None, max_examples=None):
         all_data.append(sft_row)
         
         # Small delay to avoid overwhelming the server
-        time.sleep(0.1)
+        # time.sleep(0.1)
     
     df = pd.DataFrame(all_data)
     print(f"\nCreated SFT dataset with {len(df)} examples for study search")
