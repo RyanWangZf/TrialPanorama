@@ -112,12 +112,12 @@ def save_sft_data(df, output_dir=None):
     os.makedirs(output_dir, exist_ok=True)
     
     # Save as CSV
-    csv_path = os.path.join(output_dir, "sft_training_data.csv")
+    csv_path = os.path.join(output_dir, "sft_design_data.csv")
     df.to_csv(csv_path, index=False)
     print(f"Saved SFT data to {csv_path}")
     
     # Save as Parquet (more efficient for large datasets)
-    parquet_path = os.path.join(output_dir, "sft_training_data.parquet")
+    parquet_path = os.path.join(output_dir, "sft_design_data.parquet")
     df.to_parquet(parquet_path, index=False)
     print(f"Saved SFT data to {parquet_path}")
     
@@ -125,7 +125,7 @@ def save_sft_data(df, output_dir=None):
 
 def main():
     """Main function to build and save SFT data."""
-    print("Building SFT training data from TrialPanorama benchmark...")
+    print("Building SFT design data from TrialPanorama benchmark...")
     
     # Build the SFT dataset
     sft_df = build_sft_data()
@@ -137,7 +137,7 @@ def main():
     # Save the data
     csv_path, parquet_path = save_sft_data(sft_df)
     
-    print(f"\nSFT data building complete!")
+    print(f"\nSFT design data building complete!")
     print(f"Total examples: {len(sft_df)}")
     print(f"Files saved:")
     print(f"  - CSV: {csv_path}")
