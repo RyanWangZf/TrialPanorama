@@ -1,0 +1,229 @@
+import json
+import pandas as pd
+import os
+from pathlib import Path
+import requests
+from tqdm import tqdm
+import time
+
+# Get the repository root directory (parent of data_pipeline)
+REPO_ROOT = Path(__file__).parent.parent
+RAW_DATA_DIR = REPO_ROOT / "TrialPanorama-benchmark"
+OUTPUT_DIR = REPO_ROOT / "data_pipeline"
+
+# vLLM server configuration
+VLLM_SERVER_URL = "http://localhost:8000/v1/completions"
+
+def load_jsonl_data(file_path):
+    """Load data from a JSONL file."""
+    data = []
+    with open(file_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            if line.strip():
+                data.append(json.loads(line.strip()))
+    return data
+
+def create_instruction_prompt():
+    """Create instruction prompt for study search/retrieval task."""
+    return ("You are a systematic review expert specializing in study retrieval for medical research. "
+            "Based on the systematic review background, objectives, and selection criteria provided, "
+            "your task is to identify relevant PubMed IDs (PMIDs) of studies that should be included in this review.")
+
+def format_retrieval_question(item):
+    """Format the retrieval question with systematic review information."""
+    inputs = item.get('inputs', {})
+    
+    # Extract review information
+    background = inputs.get('background', '')
+    objectives = inputs.get('objectives', '')
+    selection_criteria = inputs.get('selection criteria', '')
+    
+    # Format the question
+    question = f"""Please identify relevant studies for the following systematic review:
+
+Background: {background}
+
+Objectives: {objectives}
+
+Selection Criteria: {selection_criteria}
+
+Based on this systematic review context, provide a list of relevant PubMed IDs (PMIDs) that should be included in this review."""
+    
+    return question
+
+def call_vllm_api(prompt, max_tokens=512, temperature=0.7, top_p=0.95):
+    """Call the vLLM API to generate a response."""
+    payload = {
+        "model": "DeepRetrieval/DeepRetrieval-PubMed-3B-Llama",
+        "prompt": prompt,
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+        "top_p": top_p,
+        "stop": ["\n\n", "Based on"],
+    }
+    
+    try:
+        response = requests.post(VLLM_SERVER_URL, json=payload, timeout=60)
+        response.raise_for_status()
+        result = response.json()
+        return result['choices'][0]['text'].strip()
+    except requests.exceptions.RequestException as e:
+        print(f"Error calling vLLM API: {e}")
+        return None
+    except Exception as e:
+        print(f"Error processing response: {e}")
+        return None
+
+def build_retrieval_sft_data(base_path=None, max_examples=None):
+    """
+    Build SFT (Supervised Fine-Tuning) data from study search training JSONL file.
+    Uses vLLM inference to generate answers.
+    
+    Args:
+        base_path: Path to the benchmark data directory. If None, uses REPO_ROOT/TrialPanorama-benchmark
+        max_examples: Maximum number of examples to process. If None, process all.
+    
+    Returns:
+        pandas.DataFrame: DataFrame with columns [id, task_type, instruction_prompt, question, answer]
+    """
+    if base_path is None:
+        base_path = RAW_DATA_DIR
+    
+    all_data = []
+    
+    train_file = os.path.join(base_path, "study_search", "train.jsonl")
+    
+    if not os.path.exists(train_file):
+        print(f"Error: {train_file} not found!")
+        return pd.DataFrame()
+        
+    print(f"Loading data from {train_file}...")
+    task_data = load_jsonl_data(train_file)
+    
+    if max_examples is not None:
+        task_data = task_data[:max_examples]
+        print(f"Processing first {max_examples} examples...")
+    
+    instruction_prompt = create_instruction_prompt()
+    
+    print(f"\nRunning inference with vLLM server at {VLLM_SERVER_URL}...")
+    print("Make sure the vLLM server is running (./vllm_host.sh)")
+    
+    # Test connection
+    try:
+        test_response = requests.get("http://localhost:8000/health", timeout=5)
+        print("✓ vLLM server is reachable")
+    except:
+        print("⚠ Warning: Cannot reach vLLM server. Make sure it's running.")
+        print("  Run: cd data_pipeline && ./vllm_host.sh")
+        return pd.DataFrame()
+    
+    failed_count = 0
+    
+    for idx, item in enumerate(tqdm(task_data, desc="Processing examples")):
+        # Format the question
+        question_text = format_retrieval_question(item)
+        
+        # Create the full prompt for the model
+        full_prompt = f"{instruction_prompt}\n\n{question_text}\n\nRelevant PMIDs:"
+        
+        # Call vLLM API to generate answer
+        answer_text = call_vllm_api(full_prompt)
+        
+        if answer_text is None:
+            failed_count += 1
+            # Use empty string as fallback
+            answer_text = ""
+            print(f"\nWarning: Failed to generate answer for example {idx}")
+        
+        sft_row = {
+            'id': idx,
+            'task_type': 'study_search',
+            'instruction_prompt': instruction_prompt,
+            'question': question_text,
+            'answer': answer_text
+        }
+        
+        all_data.append(sft_row)
+        
+        # Small delay to avoid overwhelming the server
+        time.sleep(0.1)
+    
+    df = pd.DataFrame(all_data)
+    print(f"\nCreated SFT dataset with {len(df)} examples for study search")
+    if failed_count > 0:
+        print(f"⚠ Warning: {failed_count} examples failed to generate answers")
+    
+    return df
+
+def save_retrieval_sft_data(df, output_dir=None):
+    """
+    Save the study search SFT data to both CSV and Parquet formats.
+    
+    Args:
+        output_dir: Directory to save the output files. If None, uses REPO_ROOT/data_pipeline
+    """
+    if output_dir is None:
+        output_dir = OUTPUT_DIR
+    
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Save as CSV
+    csv_path = os.path.join(output_dir, "sft_study_search_data.csv")
+    df.to_csv(csv_path, index=False)
+    print(f"Saved study search SFT data to {csv_path}")
+    
+    # Save as Parquet (more efficient for large datasets)
+    parquet_path = os.path.join(output_dir, "sft_study_search_data.parquet")
+    df.to_parquet(parquet_path, index=False)
+    print(f"Saved study search SFT data to {parquet_path}")
+    
+    return csv_path, parquet_path
+
+def main():
+    """Main function to build and save study search SFT data."""
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='Build SFT data for study search using vLLM inference')
+    parser.add_argument('--max-examples', type=int, default=None, 
+                       help='Maximum number of examples to process (default: all)')
+    parser.add_argument('--temperature', type=float, default=0.7,
+                       help='Sampling temperature for vLLM (default: 0.7)')
+    
+    args = parser.parse_args()
+    
+    print("Building SFT study search data with vLLM inference...")
+    print(f"vLLM Server: {VLLM_SERVER_URL}")
+    
+    # Build the SFT dataset with vLLM inference
+    sft_df = build_retrieval_sft_data(max_examples=args.max_examples)
+    
+    if sft_df.empty:
+        print("No data generated. Exiting.")
+        return
+    
+    # Display sample data
+    print("\nSample data:")
+    print("Columns:", sft_df.columns.tolist())
+    print("\nFirst example:")
+    first_example = sft_df.iloc[0]
+    for col in sft_df.columns:
+        content = str(first_example[col])
+        print(f"{col}: {content[:300]}{'...' if len(content) > 300 else ''}")
+    
+    print(f"\nDataFrame info:")
+    print(f"Shape: {sft_df.shape}")
+    print(f"Columns: {sft_df.columns.tolist()}")
+    
+    # Save the data
+    csv_path, parquet_path = save_retrieval_sft_data(sft_df)
+    
+    print(f"\nStudy search SFT data building complete!")
+    print(f"Total examples: {len(sft_df)}")
+    print(f"Files saved:")
+    print(f"  - CSV: {csv_path}")
+    print(f"  - Parquet: {parquet_path}")
+
+if __name__ == "__main__":
+    main()
+
