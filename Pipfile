@@ -128,6 +128,8 @@ tiktoken = "*"
 langchain-openai = "*"
 langchain-core = "*"
 scikit-learn = "*"
+vllm = "*"
+transformers = "<4.54.0"
 
 [dev-packages]
 ipykernel = "*"
