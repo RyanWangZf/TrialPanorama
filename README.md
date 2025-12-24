@@ -1,6 +1,9 @@
-# TrialPanorama:Clinical Trial Database and Benchmark
+# TrialPanorama: Developing Large Language Models for Clinical Research
 
-This benchmark framework provides tools for evaluating language models on clinical trial-related tasks, designed to assess model capabilities in understanding and reasoning about medical research:
+[![arXiv](https://img.shields.io/badge/arXiv-2505.16097-b31b1b.svg)](https://arxiv.org/abs/2505.16097)
+[![Dataset](https://img.shields.io/badge/🤗%20Hugging%20Face-Dataset-yellow)](https://huggingface.co/datasets/TrialPanorama/Dataset)
+
+**TrialPanorama** is a large-scale structured resource that aggregates 1.6M clinical trial records from fifteen global registries and links them with biomedical ontologies and associated literature. This repository provides a comprehensive benchmark framework for evaluating language models on clinical trial-related tasks, designed to assess model capabilities in understanding and reasoning about medical research.
 
 1. **Systematic Review Tasks**:
    - **Study Search**: Finding relevant clinical trials given a systematic review setup
@@ -13,11 +16,20 @@ This benchmark framework provides tools for evaluating language models on clinic
    - **Endpoint Design**: Defining primary and secondary outcomes
    - **Sample Size Estimation**: Calculating appropriate sample sizes
 
-## Data
+## Paper and Dataset
 
-- TrialPanorama-database: https://huggingface.co/datasets/zifeng-ai/TrialPanorama-database
+📄 **Paper**: [Developing Large Language Models for Clinical Research Using One Million Clinical Trials](https://arxiv.org/abs/2505.16097)
 
-- TrialPanorama-benchmark: https://huggingface.co/datasets/zifeng-ai/TrialPanorama-benchmark
+We introduce **TrialPanorama**, a comprehensive resource for developing and evaluating AI systems for clinical research. The dataset includes:
+- **1.6M clinical trial records** from fifteen global registries
+- Links to biomedical ontologies and associated literature
+- **152K training and testing samples** across eight clinical research tasks
+
+🤗 **Dataset**: [TrialPanorama/Dataset](https://huggingface.co/datasets/TrialPanorama/Dataset)
+
+The dataset includes supervised fine-tuning data for:
+- Systematic review workflows (study search, screening, evidence summarization)
+- Trial design and optimization (arm design, eligibility criteria, endpoints, sample size estimation, completion assessment)
 
 ## Installation
 
@@ -273,15 +285,17 @@ Task classes handle:
 - Results calculation
 
 
-# Reference
+# Citation
 
-If you find this project useful, please cite the following paper:
+If you find this project useful, please cite our paper:
 
 ```bibtex
 @article{wang2025trialpanorama,
-  title     = {TrialPanorama: Database and Benchmark for Systematic Review and Design of Clinical Trials},
-  author    = {Wang, Zifeng and Jin, Qiao and Lin, Jiacheng and Gao, Junyi and Pradeepkumar, Jathurshan and Jiang, Pengcheng and Danek, Benjamin and Lu, Zhiyong and Sun, Jimeng},
+  title     = {Developing Large Language Models for Clinical Research Using One Million Clinical Trials},
+  author    = {Wang, Zifeng and Lin, Jiacheng and Jin, Qiao and Gao, Junyi and Pradeepkumar, Jathurshan and Jiang, Pengcheng and Lu, Zhiyong and Sun, Jimeng},
+  journal   = {arXiv preprint arXiv:2505.16097},
   year      = {2025},
+  url       = {https://arxiv.org/abs/2505.16097}
 }
 ```
 
