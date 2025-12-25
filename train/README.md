@@ -11,7 +11,7 @@ Our training pipeline consists of two main phases:
 
 The complete training pipeline is illustrated below:
 
-![Training Pipeline](figs/pipeline.png)
+<img src="figs/pipeline.png" alt="Training Pipeline" style="width: 80%;">
 
 ## Phase 1: Supervised Fine-Tuning (SFT)
 
