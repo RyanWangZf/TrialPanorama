@@ -2,6 +2,7 @@
 
 [![arXiv](https://img.shields.io/badge/arXiv-2505.16097-b31b1b.svg)](https://arxiv.org/abs/2505.16097)
 [![Dataset](https://img.shields.io/badge/🤗%20Hugging%20Face-Dataset-yellow)](https://huggingface.co/datasets/TrialPanorama/Dataset)
+[![Model](https://img.shields.io/badge/🤗%20Hugging%20Face-Model-blue)](https://huggingface.co/TrialPanorama/Qwen-3-8B-TP)
 
 **TrialPanorama** is a large-scale structured resource that aggregates 1.6M clinical trial records from fifteen global registries and links them with biomedical ontologies and associated literature. This repository provides a comprehensive benchmark framework for evaluating language models on clinical trial-related tasks, designed to assess model capabilities in understanding and reasoning about medical research.
 
